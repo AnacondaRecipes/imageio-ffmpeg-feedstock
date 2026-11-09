@@ -1,44 +1,63 @@
 {% set name = "imageio-ffmpeg" %}
-{% set version = "0.4.8" %}
-{% set sha256 = "fdaa05ad10fe070b7fa8e5f615cb0d28f3b9b791d00af6d2a11e694158d10aa9" %}
-
+{% set version = "0.6.0" %}
 
 package:
   name: {{ name }}
   version: {{ version }}
 
 source:
-  fn: {{ name }}-{{ version }}.tar.gz
-  url: https://pypi.io/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.tar.gz
-  sha256: {{ sha256 }}
+  url: https://pypi.org/packages/source/{{ name[0] }}/{{ name }}/{{ name | replace('-', '_') }}-{{ version }}.tar.gz
+  sha256: e2556bed8e005564a9f925bb7afa4002d82770d6b08825078b7697ab88ba1755
 
 build:
-  noarch: python
-  script: {{ PYTHON }} -m pip install . --no-deps -vv
   number: 0
+  skip: true  # [py<39]
+  script: {{ PYTHON }} -m pip install . --no-deps --no-build-isolation -vv
 
 requirements:
   host:
-    - python >=3
+    - python
     - pip
-  run:
-    - python >=3
     - setuptools
-    - ffmpeg
+  run:
+    - python
+    - ffmpeg {{ ffmpeg }}
+
+# Anaconda FFmpeg may use libopenh264 instead of libx264,
+# resulting in different encoding behavior and frame counts.
+{% set deselected_tests = " --deselect=tests/test_io.py::test_write_quality" %}
+# The test assumes a 1-second timeout produces an incomplete video,
+# which is not guaranteed across FFmpeg builds and CI environments.
+{% set deselected_tests = deselected_tests + " --deselect=tests/test_io.py::test_write_big_frames" %} 
 
 test:
+  source_files:
+    - tests
   imports:
     - imageio_ffmpeg
+  requires:
+    - pip
+    - pytest
+    - numpy
+    - psutil
+  commands:
+    - pip check
+    - pytest -v tests {{ deselected_tests }}
 
 about:
   home: https://github.com/imageio/imageio-ffmpeg
   doc_url: https://github.com/imageio/imageio-ffmpeg
   dev_url: https://github.com/imageio/imageio-ffmpeg
   summary: FFMPEG wrapper for Python
-  license: BSD 2-Clause
+  license: BSD-2-Clause
+  license_family: BSD
   license_file: LICENSE
 
 extra:
   recipe-maintainers:
     - anjos
     - almarklein
+  skip-lints:
+      # FFmpeg is only required at runtime; the Python wrapper does not
+      # link against FFmpeg or require it during the build.
+      - cbc_dep_in_run_missing_from_host
