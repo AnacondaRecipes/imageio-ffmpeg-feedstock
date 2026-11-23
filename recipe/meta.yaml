@@ -1,5 +1,5 @@
 {% set name = "imageio-ffmpeg" %}
-{% set version = "0.6.0" %}
+{% set version = "0.8.1" %}
 
 package:
   name: {{ name }}
@@ -7,11 +7,11 @@ package:
 
 source:
   url: https://pypi.org/packages/source/{{ name[0] }}/{{ name }}/{{ name | replace('-', '_') }}-{{ version }}.tar.gz
-  sha256: e2556bed8e005564a9f925bb7afa4002d82770d6b08825078b7697ab88ba1755
+  sha256: 9e5162fa482c3c45a6703b2223947d15c37730e63b048d64937fa80243aa5a0c
 
 build:
   number: 0
-  skip: true  # [py<39]
+  skip: true  # [py<310]
   script: {{ PYTHON }} -m pip install . --no-deps --no-build-isolation -vv
 
 requirements:
@@ -28,7 +28,9 @@ requirements:
 {% set deselected_tests = " --deselect=tests/test_io.py::test_write_quality" %}
 # The test assumes a 1-second timeout produces an incomplete video,
 # which is not guaranteed across FFmpeg builds and CI environments.
-{% set deselected_tests = deselected_tests + " --deselect=tests/test_io.py::test_write_big_frames" %} 
+{% set deselected_tests = deselected_tests + " --deselect=tests/test_io.py::test_write_big_frames" %}
+# No 'tools' directory in pypi tarball
+{% set deselected_tests = deselected_tests + " --deselect=tests/test_binaries.py::test_manifest_matches_definitions" %} 
 
 test:
   source_files:
